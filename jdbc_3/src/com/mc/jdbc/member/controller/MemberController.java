@@ -1,6 +1,7 @@
 package com.mc.jdbc.member.controller;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.mc.jdbc.member.dto.Member;
@@ -36,6 +37,33 @@ public class MemberController {
 		
 		if(member == null) res.put("isSuccess", false);
 		return res;
+	}
+
+	public List<Member> searchAllMember() {
+		
+		List<Member> members = memberService.selectAllMember();
+		return members;
+	}
+
+	public String join(Member member) {
+		
+		if(memberService.insertMember(member)) return "회원가입이 완료되었습니다.";
+		return "회원가입에 실패하였습니다.";
+		
+	}
+
+	public String changePassword(Member member) {
+		
+		if(memberService.updatePassword(member)) return "비밀번호 변경이 완료되었습니다.";
+		return "존재하지 않는 아이디 입니다.";
+		
+	}
+
+	public String deleteUser(String userId) {
+		
+		if(memberService.deleteUser(userId)) return "회원 삭제가 정상적으로 완료되었습니다.";
+		return "존재하지 않는 아이디 입니다.";
+		
 	}
 	
 	
