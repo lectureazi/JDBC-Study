@@ -10,6 +10,10 @@ public class HandleableException extends RuntimeException{
 		
 	}
 	
+	public HandleableException(String message) {
+		super(message);
+	}
+	
 	public HandleableException(ErrorCode error) {
 		super(error.MESSAGE);
 	}

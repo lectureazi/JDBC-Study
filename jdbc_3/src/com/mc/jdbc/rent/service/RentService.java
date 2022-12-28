@@ -2,10 +2,14 @@ package com.mc.jdbc.rent.service;
 
 import java.sql.Connection;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.mc.jdbc.book.dao.BookDao;
 import com.mc.jdbc.book.dto.Book;
+import com.mc.jdbc.common.code.RentState;
 import com.mc.jdbc.common.util.JDBCTemplate;
 import com.mc.jdbc.rent.dao.RentDao;
 import com.mc.jdbc.rent.dto.Rent;
@@ -29,6 +33,7 @@ public class RentService {
 			// 사용자ID, 대출제목, 대출도서권수
 			// 대출제목 : 첫번째 빌린 대출도서명 + [외 n권]
 			Book book = bookDao.selectBookByIdx(conn, bkIdxs.get(0));
+			
 			String title = book.getTitle() + "외 " + (bkIdxs.size() -1) + "권";
 			rent = new Rent();
 			rent.setTitle(title);
@@ -51,12 +56,10 @@ public class RentService {
 				
 				// 3. RentHistory 테이블에 각 대출도서별로 대출도서 상태에 대한 정보를 입력
 				// RM_IDX, RB_IDX, BK_IDX
-				rentDao.insertRentHistory(conn, bkIdx, "RE00");
+				rentDao.insertRentHistoryWhenNewRent(conn, bkIdx, "RE00");
 			}
 			
 			jdt.commit(conn);
-			
-			
 		}catch (Exception e) {
 			jdt.rollback(conn);
 			throw e;
@@ -66,6 +69,69 @@ public class RentService {
 		
 		return rent;
 		
+	}
+	
+	
+	public void updateRentBookReturn(int rbIdx, RentState re03) {
+		
+		updateRentBookState(rbIdx, re03);
+		
+		Connection conn = jdt.getConnection();
+		
+		// 해당 대출건의 모든 대출도서가 반납상태라면
+		// 대출건의 반납여부를 true로 지정
+		try {
+			
+			RentBook rentBook = rentDao.selectRentBookByIdx(conn, rbIdx);
+			List<RentBook> rentBooks = rentDao.selectAllRentBookByRmIdx(conn, rentBook.getRmIdx());
+			
+			if(rentBooks.stream().allMatch(e -> e.getState().equals(RentState.RE03.CODE))) {
+				rentDao.updateRentToReturn(conn, rentBook.getRmIdx());
+			}
+			
+			jdt.commit(conn);
+		}catch (Exception e) {
+			jdt.rollback(conn);
+			throw e;
+		}finally {
+			jdt.close(conn);
+		}
+		
+	}
+	
+
+	public void updateRentBookState(int rbIdx, RentState re) {
+		
+		Connection conn = jdt.getConnection();
+		
+		try {
+			
+			rentDao.updateRentBookState(conn, rbIdx, re);
+			rentDao.updateRentBookReturnDate(conn, rbIdx);
+			rentDao.insertRentHistoryWhenChangeRent(conn, rbIdx, re);
+			
+			jdt.commit(conn);
+		} catch (Exception e) {
+			jdt.rollback(conn);
+			throw e;
+		}finally {
+			jdt.close(conn);
+		}
+	}
+
+
+	public List<RentBook> selectRentBookWithRmIdx(int rmIdx) {
+		
+		Connection conn = jdt.getConnection();
+		List<RentBook> rentBooks = new ArrayList<RentBook>();
+		
+		try {
+			rentBooks = rentDao.selectRentBookWithRmIdx(conn, rmIdx);
+		} finally {
+			jdt.close(conn);
+		}
+		
+		return rentBooks;
 	}
 	
 	

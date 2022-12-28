@@ -38,6 +38,33 @@ public class BookDao {
 
 		return book;
 	}
+	
+	public boolean existBookByIdx(Connection conn, int bkIdx) {
+		
+		String sql = "select * from book where bk_idx = ?";
+		Book book = null;
+		ResultSet rset = null;
+		PreparedStatement pstm = null;
+		
+		try {
+			
+			pstm = conn.prepareStatement(sql);
+			pstm.setInt(1, bkIdx);
+			rset = pstm.executeQuery();
+			
+			//`BK_IDX`, `ISBN`, `CATEGORY`, `TITLE`, `AUTHOR`, `INFO`, `BOOK_AMT`, `REG_DATE`, `RENT_CNT`
+			while(rset.next()) {
+				book = generateBook(rset);
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}finally {
+			jdt.close(rset, pstm);
+		}
+
+		return book != null;
+	}
 
 	private Book generateBook(ResultSet rset) throws SQLException {
 		Book book;

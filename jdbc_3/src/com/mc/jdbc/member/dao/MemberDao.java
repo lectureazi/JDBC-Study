@@ -171,8 +171,58 @@ public class MemberDao {
 		
 		return members;
 	}
+
+	public Member selectMemberById(Connection conn, String userId) {
+		
+		PreparedStatement pstm = null;
+		ResultSet rset = null;
+		Member member = null;
+		String sql = "select * from member where user_id = ?";
+		
+		try {
+			pstm = conn.prepareStatement(sql);
+			pstm.setString(1, userId);
+			rset = pstm.executeQuery();
+			
+			while(rset.next()) {
+				member = generateMember(rset);
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new DataAccessException();
+		}finally {
+			jdt.close(rset, pstm);
+		}
+		
+		return member;
+	}
 	
-	
+	public boolean existMemberById(Connection conn, String userId) {
+		
+		PreparedStatement pstm = null;
+		ResultSet rset = null;
+		Member member = null;
+		String sql = "select * from member where user_id = ?";
+		
+		try {
+			pstm = conn.prepareStatement(sql);
+			pstm.setString(1, userId);
+			rset = pstm.executeQuery();
+			
+			while(rset.next()) {
+				member = generateMember(rset);
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			throw new DataAccessException();
+		}finally {
+			jdt.close(rset, pstm);
+		}
+		
+		return member != null;
+	}
 	
 	
 	
