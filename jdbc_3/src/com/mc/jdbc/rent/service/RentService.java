@@ -14,6 +14,7 @@ import com.mc.jdbc.common.util.JDBCTemplate;
 import com.mc.jdbc.rent.dao.RentDao;
 import com.mc.jdbc.rent.dto.Rent;
 import com.mc.jdbc.rent.dto.RentBook;
+import com.mc.jdbc.rent.dto.RentHistory;
 
 public class RentService {
 	
@@ -40,23 +41,29 @@ public class RentService {
 			rent.setUserId(userId);
 			rent.setRentBookCnt(bkIdxs.size());
 			
-			rentDao.insertRentMaster(conn, rent);
+			int rmIdx = rentDao.insertRentMaster(conn, rent);
 						
 			// 2. RentBook 테이블에 사용자가 대출한 개별 도서에 대한 정보를 입력
 			// RM_IDX, 도서번호, 반납일자:오늘로부터 7일 뒤
 			
 			LocalDateTime returnDate = LocalDateTime.now().plusDays(7); 
-			RentBook rentBook = null;
 			
 			for (int bkIdx : bkIdxs) {
-				rentBook = new RentBook();
+				RentBook rentBook = new RentBook();
+				rentBook.setRmIdx(rmIdx);
 				rentBook.setBkIdx(bkIdx);
 				rentBook.setReturnDate(returnDate);
-				rentDao.insertRentBook(conn, rentBook);
+				
+				int rbIdx = rentDao.insertRentBook(conn, rentBook);
 				
 				// 3. RentHistory 테이블에 각 대출도서별로 대출도서 상태에 대한 정보를 입력
 				// RM_IDX, RB_IDX, BK_IDX
-				rentDao.insertRentHistoryWhenNewRent(conn, bkIdx, "RE00");
+				RentHistory rentHistory = new RentHistory();
+				rentHistory.setRmIdx(rmIdx);
+				rentHistory.setRbIdx(rbIdx);
+				rentHistory.setBkIdx(bkIdx);
+				rentHistory.setState(RentState.RE00.CODE);
+				rentDao.insertRentHistoryWhenNewRent(conn, rentHistory);
 			}
 			
 			jdt.commit(conn);

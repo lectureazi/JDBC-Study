@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +14,7 @@ import com.mc.jdbc.common.exception.DataAccessException;
 import com.mc.jdbc.common.util.JDBCTemplate;
 import com.mc.jdbc.rent.dto.Rent;
 import com.mc.jdbc.rent.dto.RentBook;
+import com.mc.jdbc.rent.dto.RentHistory;
 
 public class RentDao {
 	
@@ -29,20 +31,26 @@ public class RentDao {
 		return sql;
 	}
 	
-	public void insertRentMaster(Connection conn, Rent rent) {
+	public int insertRentMaster(Connection conn, Rent rent) {
 		
 		//`RM_IDX`, `USER_ID`, `REG_DATE`, `IS_RETURN`, `TITLE`, `RENT_BOOK_CNT`
 		String sql = "insert into rent_master(user_id, title, rent_book_cnt) values(?, ?, ?)";
 		PreparedStatement pstm =  null;
+		ResultSet rset = null;
 		
 		try {
-			pstm = conn.prepareStatement(sql);
+			
+			//auto-increment로 생성된 기본키값을 반환받음
+			pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 			pstm.setString(1, rent.getUserId());
 			pstm.setString(2, rent.getTitle());
 			pstm.setInt(3, rent.getRentBookCnt());
-			
 			pstm.executeUpdate();
 			
+			rset = pstm.getGeneratedKeys();
+			rset.next(); 
+			return rset.getInt(1);
+		
 		} catch (SQLException e) {
 			e.printStackTrace();
 			throw new DataAccessException();
@@ -52,19 +60,26 @@ public class RentDao {
 	}
 	
 
-	public void insertRentBook(Connection conn, RentBook rentBook) {
+	public int insertRentBook(Connection conn, RentBook rentBook) {
 		
 		//`RB_IDX`, `RM_IDX`, `BK_IDX`, `REG_DATE`, `STATE`, `RETURN_DATE`, `EXTENSION_CNT`
 		
-		String sql = "insert into rent_book(rm_idx, bk_idx, return_date) values("+ getRentMasterLastIdx() + ",? ,?)";
+		String sql = "insert into rent_book(rm_idx, bk_idx, return_date) values(?, ?, ?)";
 		PreparedStatement pstm = null;
+		ResultSet rset = null;
 		
 		try {
 			
-			pstm = conn.prepareStatement(sql);
-			pstm.setInt(1, rentBook.getBkIdx());
-			pstm.setTimestamp(2, Timestamp.valueOf(rentBook.getReturnDate()));
+			pstm = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+			pstm.setInt(1, rentBook.getRmIdx());
+			pstm.setInt(2, rentBook.getBkIdx());
+			pstm.setTimestamp(3, Timestamp.valueOf(rentBook.getReturnDate()));
 			pstm.executeUpdate();
+			
+			rset = pstm.getGeneratedKeys();
+			rset.next();
+			return rset.getInt(1);
+		
 			
 		} catch (SQLException e) {
 			e.printStackTrace();
@@ -75,17 +90,19 @@ public class RentDao {
 		
 	}
 
-	public void insertRentHistoryWhenNewRent(Connection conn, int bkIdx, String state) {
+	public void insertRentHistoryWhenNewRent(Connection conn, RentHistory rentHistory) {
 		
 		String sql = "insert into rent_history(rm_idx, rb_idx, bk_idx, state)"
-				+ " values( " + getRentMasterLastIdx() +", " + getRentBookLastIdx() + ",  ?,?) ";
+				+ " values( ?, ?, ?,?) ";
 		
 		PreparedStatement pstm = null;
 		
 		try {
 			pstm = conn.prepareStatement(sql);
-			pstm.setInt(1, bkIdx);
-			pstm.setString(2, state);
+			pstm.setInt(1, rentHistory.getRmIdx());
+			pstm.setInt(2, rentHistory.getRbIdx());
+			pstm.setInt(3, rentHistory.getBkIdx());
+			pstm.setString(4, rentHistory.getState());
 			
 			pstm.executeUpdate();
 			
